@@ -87,18 +87,33 @@ def run_clustering(
         labels, centroids = kmeans(X, k=k, random_state=random_state)
     elif algorithm == "sklearn_kmeans":
         labels, centroids = sklearn_kmeans(X, k=k, random_state=random_state)
+        
+    elif algorithm == "agglomerative":
+        from .agglomerative import agglomerative_clustering
+        labels, centroids = agglomerative_clustering(X, n_clusters=k)
+        
     else:
-        raise ValueError(f"Unknown algorithm '{algorithm}'. Use 'kmeans' or 'sklearn_kmeans'.")
+        raise ValueError(
+            f"Unknown algorithm '{algorithm}'. Use 'kmeans', 'sklearn_kmeans', or 'agglomerative'."
+    )
 
     # Compute metrics
-    inertia = compute_inertia(X, labels, centroids)
-    metrics: Dict[str, Any] = {"inertia": inertia}
+    metrics: Dict[str, Any] = {}
 
+    # Inertia only valid when centroids exist (e.g., kmeans)
+    if centroids is not None:
+        inertia = compute_inertia(X, labels, centroids)
+    else:
+        inertia = None
+        metrics["inertia"] = inertia
+        
+        # Silhouette score always works as long as there are at least 2 clusters
     try:
         sil = silhouette_score_sklearn(X, labels)
-    except ValueError:
+    except Exception:
         sil = None
-    metrics["silhouette"] = sil
+        metrics["silhouette"] = sil
+
 
     # Add labels to DataFrame
     df = df.copy()
